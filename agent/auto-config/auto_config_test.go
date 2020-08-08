@@ -116,34 +116,6 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestLoadConfig(t *testing.T) {
-	// Basically just testing that injection of the extra
-	// source works.
-	devMode := true
-	builderOpts := config.BuilderOpts{
-		// putting this in dev mode so that the config validates
-		// without having to specify a data directory
-		DevMode: &devMode,
-	}
-
-	cfg, warnings, err := LoadConfig(builderOpts, config.Source{
-		Name:   "test",
-		Format: "hcl",
-		Data:   `node_name = "hobbiton"`,
-	},
-		config.Source{
-			Name:   "overrides",
-			Format: "json",
-			Data:   `{"check_reap_interval": "1ms"}`,
-		})
-
-	require.NoError(t, err)
-	require.Empty(t, warnings)
-	require.NotNil(t, cfg)
-	require.Equal(t, "hobbiton", cfg.NodeName)
-	require.Equal(t, 1*time.Millisecond, cfg.CheckReapInterval)
-}
-
 func TestReadConfig(t *testing.T) {
 	// just testing that some auto config source gets injected
 	devMode := true

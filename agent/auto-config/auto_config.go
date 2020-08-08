@@ -55,16 +55,13 @@ var (
 // then we will need to add some locking here. I am deferring that for now
 // to help ease the review of this already large PR.
 type AutoConfig struct {
-	builderOpts        config.BuilderOpts
+	acc                Config
 	logger             hclog.Logger
-	directRPC          DirectRPC
 	waiter             *lib.RetryWaiter
-	overrides          []config.Source
 	certMonitor        CertMonitor
 	config             *config.RuntimeConfig
 	autoConfigResponse *pbautoconf.AutoConfigResponse
 	autoConfigData     string
-	cancel             context.CancelFunc
 }
 
 // New creates a new AutoConfig object for providing automatic
@@ -90,16 +87,12 @@ func New(config *Config) (*AutoConfig, error) {
 		waiter = lib.NewRetryWaiter(1, 0, 10*time.Minute, lib.NewJitterRandomStagger(25))
 	}
 
-	ac := &AutoConfig{
-		builderOpts: config.BuilderOpts,
+	return &AutoConfig{
+		acc:         *config,
 		logger:      logger,
-		directRPC:   config.DirectRPC,
 		waiter:      waiter,
-		overrides:   config.Overrides,
 		certMonitor: config.CertMonitor,
-	}
-
-	return ac, nil
+	}, nil
 }
 
 // ReadConfig will parse the current configuration and inject any
@@ -111,7 +104,7 @@ func (ac *AutoConfig) ReadConfig() (*config.RuntimeConfig, error) {
 		Data:   ac.autoConfigData,
 	}
 
-	cfg, warnings, err := LoadConfig(ac.builderOpts, src, ac.overrides...)
+	cfg, warnings, err := ac.acc.Loader(src)
 	if err != nil {
 		return cfg, err
 	}
@@ -384,7 +377,7 @@ func (ac *AutoConfig) getInitialConfigurationOnce(ctx context.Context, csr strin
 			}
 
 			ac.logger.Debug("making AutoConfig.InitialConfiguration RPC", "addr", addr.String())
-			if err = ac.directRPC.RPC(ac.config.Datacenter, ac.config.NodeName, &addr, "AutoConfig.InitialConfiguration", &request, &resp); err != nil {
+			if err = ac.acc.DirectRPC.RPC(ac.config.Datacenter, ac.config.NodeName, &addr, "AutoConfig.InitialConfiguration", &request, &resp); err != nil {
 				ac.logger.Error("AutoConfig.InitialConfiguration RPC failed", "addr", addr.String(), "error", err)
 				continue
 			}

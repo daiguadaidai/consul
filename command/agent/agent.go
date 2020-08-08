@@ -165,19 +165,16 @@ func (c *cmd) run(args []string) int {
 		return 1
 	}
 
-	logGate := logging.GatedWriter{Writer: &cli.UiWriter{Ui: c.UI}}
-
-	agentOptions := []agent.AgentOption{
-		agent.WithBuilderOpts(c.flagArgs),
-		agent.WithCLI(c.UI),
-		agent.WithLogWriter(&logGate),
-		agent.WithTelemetry(true),
-	}
-
-	agent, err := agent.New(agentOptions...)
+	logGate := &logging.GatedWriter{Writer: &cli.UiWriter{Ui: c.UI}}
+	bd, err := newBaseDeps(c, logGate)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
+	}
+
+	agent, err := agent.New(bd)
+	if err != nil {
+
 	}
 
 	config := agent.GetConfig()
